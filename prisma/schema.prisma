@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  image     String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  tools     Tool[]
+  reviews   Review[]
+  reports   Report[]
+}
+
+model Tool {
+  id               String   @id @default(cuid())
+  title            String
+  description      String
+  category         String
+  fileUrl          String
+  thumbnailUrl     String?
+  isBrowserRunnable Boolean  @default(false)
+  instructions     String?
+  downloadCount    Int      @default(0)
+  viewCount        Int      @default(0)
+  createdAt        DateTime @default(now())
+  authorId         String
+  author           User     @relation(fields: [authorId], references: [id])
+  reviews          Review[]
+  reports          Report[]
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
+  toolId    String
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([toolId, userId])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  reason    String
+  createdAt DateTime @default(now())
+  toolId    String
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([toolId, userId])
+}
