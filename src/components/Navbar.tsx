@@ -57,7 +57,7 @@ export default function Navbar() {
                   <Upload className="h-4 w-4" />
                   Share Tool
                 </Link>
-                {(session.user as { role?: string })?.role === "admin" && (
+                {(session.user as Record<string, unknown>)?.role === "admin" && (
                   <Link
                     href="/admin"
                     className="text-gray-600 hover:text-gray-900"
@@ -67,7 +67,7 @@ export default function Navbar() {
                   </Link>
                 )}
                 <Link
-                  href={`/profile/${session.user?.id}`}
+                  href={`/profile/${(session.user as Record<string, unknown>)?.id}`}
                   className="text-gray-600 hover:text-gray-900"
                 >
                   <User className="h-5 w-5" />
