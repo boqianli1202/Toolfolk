@@ -6,7 +6,7 @@ function getResend() {
 
 export async function sendVerificationEmail(email: string, token: string) {
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
+  const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`;
 
   const resend = getResend();
   await resend.emails.send({
