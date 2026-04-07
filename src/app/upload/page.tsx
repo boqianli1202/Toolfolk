@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
+import { upload } from "@vercel/blob/client";
+import JSZip from "jszip";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
 
@@ -186,13 +188,58 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           body: JSON.stringify({ title, description, category, instructions, code: combined }),
         });
       } else if (mode === "desktop") {
-        const formData = new FormData();
-        formData.append("title", title);
-        formData.append("description", description);
-        formData.append("category", category);
-        formData.append("instructions", instructions);
-        formData.append("file", zipFile!);
-        res = await fetch("/api/tools/upload-zip", { method: "POST", body: formData });
+        // Step 1: Detect project type from ZIP
+        const zipBuffer = await zipFile!.arrayBuffer();
+        const zip = await JSZip.loadAsync(zipBuffer);
+        const files = Object.keys(zip.files);
+        const normalized = files.filter(f => !f.endsWith("/"));
+
+        let language = "unknown", entryFile: string | null = null, dependencies: string | null = null;
+
+        // Strip top-level folder
+        let stripped = normalized;
+        if (normalized.length > 0) {
+          const first = normalized[0].split("/");
+          if (first.length > 1) {
+            const prefix = first[0] + "/";
+            if (normalized.every(p => p.startsWith(prefix))) {
+              stripped = normalized.map(p => p.slice(prefix.length));
+            }
+          }
+        }
+
+        if (stripped.some(f => f === "requirements.txt") || stripped.some(f => f.endsWith(".py"))) {
+          language = "python";
+          dependencies = stripped.includes("requirements.txt") ? "requirements.txt" : null;
+          const pyFiles = stripped.filter(f => f.endsWith(".py") && !f.includes("/"));
+          entryFile = pyFiles.find(f => f === "main.py") || pyFiles.find(f => f === "app.py") || pyFiles.find(f => f === "clock.py") || pyFiles[0] || null;
+        } else if (stripped.includes("package.json")) {
+          language = "node";
+          dependencies = "package.json";
+          entryFile = "index.js";
+        } else if (stripped.includes("index.html")) {
+          language = "html";
+          entryFile = "index.html";
+        }
+
+        // Step 2: Upload ZIP directly to Vercel Blob (bypasses server body limit)
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
+        const blob = await upload(filename, zipFile!, {
+          access: "public",
+          handleUploadUrl: "/api/tools/upload-blob",
+        });
+
+        // Step 3: Create Tool record with metadata
+        res = await fetch("/api/tools/upload-zip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title, description, category, instructions,
+            blobUrl: blob.url,
+            fileSize: zipFile!.size,
+            language, entryFile, dependencies,
+          }),
+        });
       } else {
         const formData = new FormData();
         formData.append("title", title);
