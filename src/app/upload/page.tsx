@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles } from "lucide-react";
@@ -8,6 +8,28 @@ import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
 
 type UploadMode = "paste" | "file";
+type CodeTab = "html" | "css" | "js";
+
+const TAB_CONFIG: { key: CodeTab; label: string; icon: string; placeholder: string }[] = [
+  {
+    key: "html",
+    label: "HTML",
+    icon: "🌐",
+    placeholder: '<h1>Hello World</h1>\n<p>Your content here...</p>\n<button id="btn">Click me</button>',
+  },
+  {
+    key: "css",
+    label: "CSS",
+    icon: "🎨",
+    placeholder: "body {\n  font-family: system-ui, sans-serif;\n  padding: 20px;\n  background: #f8fafc;\n}\n\nh1 {\n  color: #1e293b;\n}",
+  },
+  {
+    key: "js",
+    label: "JavaScript",
+    icon: "⚡",
+    placeholder: 'document.getElementById("btn").addEventListener("click", () => {\n  alert("Hello!");\n});',
+  },
+];
 
 export default function UploadPage() {
   const { data: session, status } = useSession();
@@ -21,8 +43,11 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  // Paste mode
-  const [code, setCode] = useState("");
+  // Multi-file paste mode
+  const [activeTab, setActiveTab] = useState<CodeTab>("html");
+  const [htmlCode, setHtmlCode] = useState("");
+  const [cssCode, setCssCode] = useState("");
+  const [jsCode, setJsCode] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -30,15 +55,71 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [isBrowserRunnable, setIsBrowserRunnable] = useState(false);
 
-  // Update preview when code changes
-  useEffect(() => {
-    if (showPreview && iframeRef.current && code) {
-      const blob = new Blob([code], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      iframeRef.current.src = url;
-      return () => URL.revokeObjectURL(url);
+  // Combine files into a single HTML document
+  const buildCombinedCode = useCallback(() => {
+    const hasCSS = cssCode.trim().length > 0;
+    const hasJS = jsCode.trim().length > 0;
+    const htmlContent = htmlCode.trim();
+
+    // If the HTML already has a full document structure, inject CSS/JS into it
+    if (htmlContent.toLowerCase().includes("<!doctype") || htmlContent.toLowerCase().includes("<html")) {
+      let combined = htmlContent;
+      if (hasCSS) {
+        const styleTag = `<style>\n${cssCode}\n</style>`;
+        if (combined.includes("</head>")) {
+          combined = combined.replace("</head>", `${styleTag}\n</head>`);
+        } else if (combined.includes("<body")) {
+          combined = combined.replace(/<body/i, `${styleTag}\n<body`);
+        } else {
+          combined = styleTag + "\n" + combined;
+        }
+      }
+      if (hasJS) {
+        const scriptTag = `<script>\n${jsCode}\n</script>`;
+        if (combined.includes("</body>")) {
+          combined = combined.replace("</body>", `${scriptTag}\n</body>`);
+        } else {
+          combined += "\n" + scriptTag;
+        }
+      }
+      return combined;
     }
-  }, [code, showPreview]);
+
+    // Otherwise, wrap everything in a clean HTML document
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title || "Tool"}</title>${hasCSS ? `\n<style>\n${cssCode}\n</style>` : ""}
+</head>
+<body>
+${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
+</body>
+</html>`;
+  }, [htmlCode, cssCode, jsCode, title]);
+
+  // Update preview
+  useEffect(() => {
+    if (showPreview && iframeRef.current) {
+      const combined = buildCombinedCode();
+      if (combined.trim()) {
+        const blob = new Blob([combined], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        iframeRef.current.src = url;
+        return () => URL.revokeObjectURL(url);
+      }
+    }
+  }, [htmlCode, cssCode, jsCode, showPreview, buildCombinedCode]);
+
+  const codeValues: Record<CodeTab, string> = { html: htmlCode, css: cssCode, js: jsCode };
+  const codeSetters: Record<CodeTab, (v: string) => void> = {
+    html: setHtmlCode,
+    css: setCssCode,
+    js: setJsCode,
+  };
+
+  const hasAnyCode = htmlCode.trim() || cssCode.trim() || jsCode.trim();
 
   if (status === "loading") {
     return (
@@ -75,8 +156,8 @@ export default function UploadPage() {
       setError("Please select a category");
       return;
     }
-    if (mode === "paste" && !code.trim()) {
-      setError("Please paste your code");
+    if (mode === "paste" && !hasAnyCode) {
+      setError("Please add some code in at least one tab");
       return;
     }
     if (mode === "file" && !file) {
@@ -89,7 +170,7 @@ export default function UploadPage() {
 
     try {
       if (mode === "paste") {
-        // Send code as JSON
+        const combined = buildCombinedCode();
         const res = await fetch("/api/tools/upload-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -98,7 +179,7 @@ export default function UploadPage() {
             description,
             category,
             instructions,
-            code,
+            code: combined,
           }),
         });
         const data = await res.json();
@@ -109,7 +190,6 @@ export default function UploadPage() {
           setUploading(false);
         }
       } else {
-        // Send file as FormData
         const formData = new FormData();
         formData.append("title", title);
         formData.append("description", description);
@@ -239,7 +319,7 @@ export default function UploadPage() {
           <input type="hidden" name="category" value={category} required />
         </div>
 
-        {/* Paste Code mode */}
+        {/* Paste Code mode — Multi-file editor */}
         {mode === "paste" && (
           <>
             <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
@@ -248,18 +328,18 @@ export default function UploadPage() {
                 <div className="text-sm text-indigo-700">
                   <p className="font-medium mb-1">Tip: Use AI to create your tool</p>
                   <p>
-                    Ask ChatGPT or Claude something like &quot;Make me a single HTML
-                    page that does X&quot; — then paste the code below. It will
-                    run directly in the browser!
+                    Ask ChatGPT or Claude to build you a tool — paste the HTML, CSS, and
+                    JavaScript into separate tabs below. Or paste everything into the HTML tab
+                    if it&apos;s a single file.
                   </p>
                 </div>
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  HTML Code
+                  Code
                 </label>
                 <button
                   type="button"
@@ -277,18 +357,51 @@ export default function UploadPage() {
                   )}
                 </button>
               </div>
-              <textarea
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                rows={12}
-                placeholder='Paste your HTML code here...&#10;&#10;Example:&#10;<!DOCTYPE html>&#10;<html>&#10;<head><title>My Tool</title></head>&#10;<body>&#10;  <h1>Hello World</h1>&#10;</body>&#10;</html>'
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y"
-                spellCheck={false}
-              />
+
+              {/* Tab bar */}
+              <div className="flex border border-gray-300 border-b-0 rounded-t-lg overflow-hidden">
+                {TAB_CONFIG.map((tab) => {
+                  const isActive = activeTab === tab.key;
+                  const hasContent = codeValues[tab.key].trim().length > 0;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition border-r border-gray-300 last:border-r-0 ${
+                        isActive
+                          ? "bg-white text-gray-900 border-b-2 border-b-indigo-500"
+                          : "bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                      }`}
+                    >
+                      <span className="text-xs">{tab.icon}</span>
+                      {tab.label}
+                      {hasContent && (
+                        <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-indigo-500" : "bg-gray-400"}`} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Code textarea */}
+              {TAB_CONFIG.map((tab) => (
+                <textarea
+                  key={tab.key}
+                  value={codeValues[tab.key]}
+                  onChange={(e) => codeSetters[tab.key](e.target.value)}
+                  rows={14}
+                  placeholder={tab.placeholder}
+                  className={`w-full px-3 py-3 border border-gray-300 rounded-b-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y ${
+                    activeTab === tab.key ? "" : "hidden"
+                  }`}
+                  spellCheck={false}
+                />
+              ))}
             </div>
 
             {/* Live Preview */}
-            {showPreview && code && (
+            {showPreview && hasAnyCode && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Preview
