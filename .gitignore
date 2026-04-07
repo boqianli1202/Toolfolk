@@ -45,3 +45,5 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+desktop-app/node_modules
+desktop-app/dist
