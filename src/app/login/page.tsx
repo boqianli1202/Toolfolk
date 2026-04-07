@@ -2,11 +2,15 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { CheckCircle } from "lucide-react";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const verified = searchParams.get("verified");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,7 +30,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError("Invalid email or password. If you just signed up, please verify your email first.");
     } else {
       router.push("/");
       router.refresh();
@@ -39,6 +43,13 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
           Welcome back
         </h1>
+
+        {verified && (
+          <div className="bg-green-50 text-green-700 text-sm rounded-lg p-3 mb-4 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            Email verified! You can now log in.
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm rounded-lg p-3 mb-4">
@@ -88,5 +99,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[80vh] flex items-center justify-center text-gray-500">
+          Loading...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

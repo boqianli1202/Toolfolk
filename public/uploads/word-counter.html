@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Counter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #f0fdf4; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+  .app { max-width: 600px; width: 100%; }
+  h1 { color: #16a34a; font-size: 22px; text-align: center; margin-bottom: 20px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat { background: white; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .stat .num { font-size: 28px; font-weight: 700; color: #16a34a; }
+  .stat .label { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+  textarea { width: 100%; height: 250px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 15px; resize: vertical; font-family: inherit; line-height: 1.6; }
+  textarea:focus { outline: none; border-color: #16a34a; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Word Counter</h1>
+  <div class="stats">
+    <div class="stat"><div class="num" id="words">0</div><div class="label">Words</div></div>
+    <div class="stat"><div class="num" id="chars">0</div><div class="label">Characters</div></div>
+    <div class="stat"><div class="num" id="sentences">0</div><div class="label">Sentences</div></div>
+    <div class="stat"><div class="num" id="readTime">0</div><div class="label">Min Read</div></div>
+  </div>
+  <textarea id="text" placeholder="Start typing or paste your text here..." oninput="count()"></textarea>
+</div>
+<script>
+  function count() {
+    const text = document.getElementById('text').value;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const chars = text.length;
+    const sentences = text.trim() ? (text.match(/[.!?]+/g) || []).length || (words > 0 ? 1 : 0) : 0;
+    const readTime = Math.ceil(words / 200);
+    document.getElementById('words').textContent = words;
+    document.getElementById('chars').textContent = chars;
+    document.getElementById('sentences').textContent = sentences;
+    document.getElementById('readTime').textContent = readTime;
+  }
+</script>
+</body>
+</html>

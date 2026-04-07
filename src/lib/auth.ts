@@ -29,6 +29,9 @@ export const authOptions: NextAuthOptions = {
 
         if (!user) return null;
 
+        // Block unverified users
+        if (!user.emailVerified) return null;
+
         const isValid = await compare(credentials.password, user.password);
         if (!isValid) return null;
 

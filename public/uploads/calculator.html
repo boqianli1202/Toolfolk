@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Calculator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .calc { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); padding: 20px; width: 280px; }
+  .display { background: #1e293b; color: white; font-size: 28px; padding: 20px; border-radius: 10px; text-align: right; margin-bottom: 16px; min-height: 60px; word-break: break-all; }
+  .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  button { padding: 16px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; transition: 0.15s; font-weight: 500; }
+  button:hover { transform: scale(1.05); }
+  .num { background: #f1f5f9; color: #1e293b; }
+  .op { background: #6366f1; color: white; }
+  .eq { background: #4f46e5; color: white; grid-column: span 2; }
+  .clear { background: #ef4444; color: white; grid-column: span 2; }
+</style>
+</head>
+<body>
+<div class="calc">
+  <div class="display" id="display">0</div>
+  <div class="buttons">
+    <button class="clear" onclick="clearAll()">Clear</button>
+    <button class="op" onclick="addOp('/')">/</button>
+    <button class="op" onclick="addOp('*')">x</button>
+    <button class="num" onclick="addNum('7')">7</button>
+    <button class="num" onclick="addNum('8')">8</button>
+    <button class="num" onclick="addNum('9')">9</button>
+    <button class="op" onclick="addOp('-')">-</button>
+    <button class="num" onclick="addNum('4')">4</button>
+    <button class="num" onclick="addNum('5')">5</button>
+    <button class="num" onclick="addNum('6')">6</button>
+    <button class="op" onclick="addOp('+')">+</button>
+    <button class="num" onclick="addNum('1')">1</button>
+    <button class="num" onclick="addNum('2')">2</button>
+    <button class="num" onclick="addNum('3')">3</button>
+    <button class="num" onclick="addNum('.')">.</button>
+    <button class="eq" onclick="calculate()">=</button>
+    <button class="num" onclick="addNum('0')" style="grid-column: span 2;">0</button>
+  </div>
+</div>
+<script>
+  let expr = '';
+  const display = document.getElementById('display');
+  function addNum(n) { expr += n; display.textContent = expr; }
+  function addOp(o) { expr += ' ' + o + ' '; display.textContent = expr; }
+  function clearAll() { expr = ''; display.textContent = '0'; }
+  function calculate() {
+    try { display.textContent = Function('"use strict"; return (' + expr + ')')(); expr = display.textContent; }
+    catch { display.textContent = 'Error'; expr = ''; }
+  }
+</script>
+</body>
+</html>

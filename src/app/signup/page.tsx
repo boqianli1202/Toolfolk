@@ -1,6 +1,5 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -32,15 +31,8 @@ export default function SignupPage() {
         return;
       }
 
-      // Auto-login after signup
-      await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      router.push("/");
-      router.refresh();
+      // Redirect to verify email page
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch {
       setError("Something went wrong");
       setLoading(false);

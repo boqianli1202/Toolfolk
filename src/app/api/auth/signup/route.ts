@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/email";
+import crypto from "crypto";
 
 export async function POST(req: Request) {
   // Rate limit: 5 signups per 15 minutes per IP
@@ -28,12 +30,27 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await hash(password, 12);
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: { name, email, password: hashedPassword },
     });
 
-    return NextResponse.json({ id: user.id, name: user.name, email: user.email });
-  } catch {
+    // Generate verification token
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Delete any existing tokens for this email
+    await prisma.verificationToken.deleteMany({ where: { email } });
+
+    await prisma.verificationToken.create({
+      data: { token, email, expires },
+    });
+
+    // Send verification email
+    await sendVerificationEmail(email, token);
+
+    return NextResponse.json({ needsVerification: true });
+  } catch (err) {
+    console.error("Signup error:", err);
     return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
   }
 }

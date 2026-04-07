@@ -7,16 +7,25 @@ datasource db {
 }
 
 model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  image         String?
+  role          String    @default("user")
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  tools         Tool[]
+  reviews       Review[]
+  reports       Report[]
+}
+
+model VerificationToken {
   id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  image     String?
-  role      String   @default("user")
+  token     String   @unique
+  email     String
+  expires   DateTime
   createdAt DateTime @default(now())
-  tools     Tool[]
-  reviews   Review[]
-  reports   Report[]
 }
 
 model Tool {
