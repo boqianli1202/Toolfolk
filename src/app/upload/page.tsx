@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
-import { upload } from "@vercel/blob/client";
 import JSZip from "jszip";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
@@ -222,12 +221,12 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           entryFile = "index.html";
         }
 
-        // Step 2: Upload ZIP directly to Vercel Blob (bypasses server body limit)
-        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-        const blob = await upload(filename, zipFile!, {
-          access: "public",
-          handleUploadUrl: "/api/tools/upload-blob",
-        });
+        // Step 2: Upload ZIP to Blob via streaming endpoint
+        const blobForm = new FormData();
+        blobForm.append("file", zipFile!);
+        const blobRes = await fetch("/api/tools/upload-blob", { method: "POST", body: blobForm });
+        const blobData = await blobRes.json();
+        if (!blobRes.ok) throw new Error(blobData.error || "Blob upload failed");
 
         // Step 3: Create Tool record with metadata
         res = await fetch("/api/tools/upload-zip", {
@@ -235,7 +234,7 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title, description, category, instructions,
-            blobUrl: blob.url,
+            blobUrl: blobData.url,
             fileSize: zipFile!.size,
             language, entryFile, dependencies,
           }),

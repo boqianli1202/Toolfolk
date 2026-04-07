@@ -1,41 +1,39 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as HandleUploadBody;
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request: req,
-      onBeforeGenerateToken: async () => {
-        // Verify auth
-        const session = await getServerSession(authOptions);
-        if (!session?.user) {
-          throw new Error("Unauthorized");
-        }
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-        return {
-          allowedContentTypes: [
-            "application/zip",
-            "application/x-zip-compressed",
-            "application/octet-stream",
-          ],
-          maximumSizeInBytes: 50 * 1024 * 1024, // 50MB
-        };
-      },
-      onUploadCompleted: async () => {
-        // Nothing needed here — the client handles creating the Tool record
-      },
+    if (!file) {
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
+    const blob = await put(filename, file.stream(), {
+      access: "public",
+      contentType: "application/zip",
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },
-      { status: 400 }
+      { status: 500 }
     );
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
