@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
+import { upload as blobUpload } from "@vercel/blob/client";
 import JSZip from "jszip";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
@@ -221,15 +222,12 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           entryFile = "index.html";
         }
 
-        // Step 2: Upload ZIP directly via streaming PUT (bypasses body size limit)
+        // Step 2: Client-side upload directly to Vercel Blob (bypasses server body limit)
         const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-        const blobRes = await fetch("/api/tools/upload-blob", {
-          method: "PUT",
-          headers: { "x-filename": blobFilename },
-          body: zipFile!,
+        const blobResult = await blobUpload(blobFilename, zipFile!, {
+          access: "public",
+          handleUploadUrl: "/api/tools/upload-blob",
         });
-        const blobData = await blobRes.json();
-        if (!blobRes.ok) throw new Error(blobData.error || "Blob upload failed");
 
         // Step 3: Create Tool record with metadata
         res = await fetch("/api/tools/upload-zip", {
@@ -237,7 +235,7 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title, description, category, instructions,
-            blobUrl: blobData.url,
+            blobUrl: blobResult.url,
             fileSize: zipFile!.size,
             language, entryFile, dependencies,
           }),
@@ -260,8 +258,8 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
         setError(data.error || "Upload failed");
         setUploading(false);
       }
-    } catch {
-      setError("Something went wrong");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
       setUploading(false);
     }
   };
