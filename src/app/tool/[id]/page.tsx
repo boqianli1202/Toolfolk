@@ -89,6 +89,11 @@ export default async function ToolPage({
         toolId={tool.id}
         fileUrl={tool.fileUrl}
         isBrowserRunnable={tool.isBrowserRunnable}
+        toolType={tool.toolType}
+        language={tool.language}
+        entryFile={tool.entryFile}
+        dependencies={tool.dependencies}
+        fileSize={tool.fileSize}
         instructions={tool.instructions}
       />
 

@@ -79,6 +79,7 @@ export default async function ProfilePage({
                   downloadCount={tool.downloadCount}
                   viewCount={tool.viewCount}
                   isBrowserRunnable={tool.isBrowserRunnable}
+                  toolType={tool.toolType}
                 />
               );
             })}

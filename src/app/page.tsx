@@ -109,6 +109,7 @@ export default async function Home() {
                     downloadCount={tool.downloadCount}
                     viewCount={tool.viewCount}
                     isBrowserRunnable={tool.isBrowserRunnable}
+                    toolType={tool.toolType}
                   />
                 );
               })}
@@ -151,6 +152,7 @@ export default async function Home() {
                     downloadCount={tool.downloadCount}
                     viewCount={tool.viewCount}
                     isBrowserRunnable={tool.isBrowserRunnable}
+                    toolType={tool.toolType}
                   />
                 );
               })}

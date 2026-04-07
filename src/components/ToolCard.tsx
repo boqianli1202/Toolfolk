@@ -23,6 +23,7 @@ interface ToolCardProps {
   downloadCount: number;
   viewCount: number;
   isBrowserRunnable: boolean;
+  toolType?: string;
 }
 
 export default function ToolCard({
@@ -36,6 +37,7 @@ export default function ToolCard({
   downloadCount,
   viewCount,
   isBrowserRunnable,
+  toolType,
 }: ToolCardProps) {
   const categoryLabel = category.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const colorClass = CATEGORY_COLORS[category] || CATEGORY_COLORS.other;
@@ -49,11 +51,15 @@ export default function ToolCard({
         <span className={`text-xs font-medium px-2 py-1 rounded-full ${colorClass}`}>
           {categoryLabel}
         </span>
-        {isBrowserRunnable && (
+        {toolType === "desktop" ? (
+          <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">
+            Desktop App
+          </span>
+        ) : isBrowserRunnable ? (
           <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-700">
             Try Online
           </span>
-        )}
+        ) : null}
       </div>
 
       <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>

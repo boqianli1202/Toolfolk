@@ -57,6 +57,7 @@ export default async function CategoryPage({
                 downloadCount={tool.downloadCount}
                 viewCount={tool.viewCount}
                 isBrowserRunnable={tool.isBrowserRunnable}
+                toolType={tool.toolType}
               />
             );
           })}

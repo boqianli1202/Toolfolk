@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Upload, FileUp, Code, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
 
-type UploadMode = "paste" | "file";
+type UploadMode = "paste" | "file" | "desktop";
 type CodeTab = "html" | "css" | "js";
 
 const TAB_CONFIG: { key: CodeTab; label: string; icon: string; placeholder: string }[] = [
@@ -54,6 +54,9 @@ export default function UploadPage() {
   // File mode
   const [file, setFile] = useState<File | null>(null);
   const [isBrowserRunnable, setIsBrowserRunnable] = useState(false);
+
+  // Desktop mode
+  const [zipFile, setZipFile] = useState<File | null>(null);
 
   // Combine files into a single HTML document
   const buildCombinedCode = useCallback(() => {
@@ -164,31 +167,32 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
       setError("Please select a file");
       return;
     }
+    if (mode === "desktop" && !zipFile) {
+      setError("Please select a ZIP folder");
+      return;
+    }
 
     setError("");
     setUploading(true);
 
     try {
+      let res: Response;
+
       if (mode === "paste") {
         const combined = buildCombinedCode();
-        const res = await fetch("/api/tools/upload-code", {
+        res = await fetch("/api/tools/upload-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title,
-            description,
-            category,
-            instructions,
-            code: combined,
-          }),
+          body: JSON.stringify({ title, description, category, instructions, code: combined }),
         });
-        const data = await res.json();
-        if (res.ok) {
-          router.push(`/tool/${data.id}`);
-        } else {
-          setError(data.error || "Upload failed");
-          setUploading(false);
-        }
+      } else if (mode === "desktop") {
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("description", description);
+        formData.append("category", category);
+        formData.append("instructions", instructions);
+        formData.append("file", zipFile!);
+        res = await fetch("/api/tools/upload-zip", { method: "POST", body: formData });
       } else {
         const formData = new FormData();
         formData.append("title", title);
@@ -197,18 +201,15 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
         formData.append("isBrowserRunnable", String(isBrowserRunnable));
         formData.append("instructions", instructions);
         formData.append("file", file!);
+        res = await fetch("/api/tools/upload", { method: "POST", body: formData });
+      }
 
-        const res = await fetch("/api/tools/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (res.ok) {
-          router.push(`/tool/${data.id}`);
-        } else {
-          setError(data.error || "Upload failed");
-          setUploading(false);
-        }
+      const data = await res.json();
+      if (res.ok) {
+        router.push(`/tool/${data.id}`);
+      } else {
+        setError(data.error || "Upload failed");
+        setUploading(false);
       }
     } catch {
       setError("Something went wrong");
@@ -250,6 +251,18 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
         >
           <FileUp className="h-4 w-4" />
           Upload File
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("desktop")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition ${
+            mode === "desktop"
+              ? "bg-indigo-600 text-white"
+              : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          <Monitor className="h-4 w-4" />
+          Desktop Program
         </button>
       </div>
 
@@ -457,6 +470,53 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
               <label htmlFor="browser-runnable" className="text-sm text-gray-700">
                 This is a browser-runnable tool (HTML/JS file)
               </label>
+            </div>
+          </>
+        )}
+
+        {/* Desktop Program mode */}
+        {mode === "desktop" && (
+          <>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Monitor className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="text-sm text-green-700">
+                  <p className="font-medium mb-1">Upload your project folder as a ZIP</p>
+                  <p>
+                    ZIP your entire project folder (Python, Node.js, or HTML) and upload it.
+                    We&apos;ll auto-detect the language and entry point. Users can install and
+                    run it with one click via the Toolfolk desktop app.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Project ZIP File
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-400 transition">
+                <Monitor className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <input
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => setZipFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="zip-upload"
+                />
+                <label
+                  htmlFor="zip-upload"
+                  className="cursor-pointer text-sm text-indigo-600 font-medium hover:text-indigo-700"
+                >
+                  Choose a ZIP file
+                </label>
+                <p className="text-xs text-gray-400 mt-1">Max 50MB</p>
+                {zipFile && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {zipFile.name} ({(zipFile.size / 1024 / 1024).toFixed(1)} MB)
+                  </p>
+                )}
+              </div>
             </div>
           </>
         )}

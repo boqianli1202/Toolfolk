@@ -103,6 +103,7 @@ export default async function BrowsePage({
                 downloadCount={tool.downloadCount}
                 viewCount={tool.viewCount}
                 isBrowserRunnable={tool.isBrowserRunnable}
+                toolType={tool.toolType}
               />
             );
           })}

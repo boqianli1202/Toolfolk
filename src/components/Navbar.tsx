@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Search, Upload, LogOut, User, Wrench, Shield } from "lucide-react";
+import { Search, Upload, LogOut, User, Wrench, Shield, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -50,6 +50,13 @@ export default function Navbar() {
 
             {session ? (
               <>
+                <Link
+                  href="/library"
+                  className="text-gray-600 hover:text-gray-900 hidden sm:block"
+                  title="My Library"
+                >
+                  <BookOpen className="h-5 w-5" />
+                </Link>
                 <Link
                   href="/upload"
                   className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"

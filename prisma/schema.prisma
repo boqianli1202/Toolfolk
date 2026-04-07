@@ -7,17 +7,18 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  password      String
-  image         String?
-  role          String    @default("user")
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  tools         Tool[]
-  reviews       Review[]
-  reports       Report[]
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  password       String
+  image          String?
+  role           String          @default("user")
+  emailVerified  DateTime?
+  createdAt      DateTime        @default(now())
+  tools          Tool[]
+  reviews        Review[]
+  reports        Report[]
+  installedTools InstalledTool[]
 }
 
 model VerificationToken {
@@ -29,21 +30,27 @@ model VerificationToken {
 }
 
 model Tool {
-  id               String   @id @default(cuid())
+  id               String          @id @default(cuid())
   title            String
   description      String
   category         String
   fileUrl          String
   thumbnailUrl     String?
-  isBrowserRunnable Boolean  @default(false)
+  isBrowserRunnable Boolean        @default(false)
+  toolType         String          @default("browser")
+  language         String?
+  entryFile        String?
+  dependencies     String?
+  fileSize         Int?
   instructions     String?
-  downloadCount    Int      @default(0)
-  viewCount        Int      @default(0)
-  createdAt        DateTime @default(now())
+  downloadCount    Int             @default(0)
+  viewCount        Int             @default(0)
+  createdAt        DateTime        @default(now())
   authorId         String
-  author           User     @relation(fields: [authorId], references: [id])
+  author           User            @relation(fields: [authorId], references: [id])
   reviews          Review[]
   reports          Report[]
+  installs         InstalledTool[]
 }
 
 model Review {
@@ -69,4 +76,15 @@ model Report {
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([toolId, userId])
+}
+
+model InstalledTool {
+  id          String   @id @default(cuid())
+  installedAt DateTime @default(now())
+  userId      String
+  toolId      String
+  user        User     @relation(fields: [userId], references: [id])
+  tool        Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, toolId])
 }
