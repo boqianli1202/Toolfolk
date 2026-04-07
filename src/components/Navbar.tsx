@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Search, Upload, LogOut, User, Wrench, Shield, BookOpen } from "lucide-react";
+import { Search, Upload, LogOut, User, Wrench, Shield, BookOpen, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -46,6 +46,12 @@ export default function Navbar() {
               className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block"
             >
               Browse
+            </Link>
+            <Link
+              href="/desktop-app"
+              className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 hidden sm:block"
+            >
+              <Download className="h-4 w-4 inline" /> App
             </Link>
 
             {session ? (
