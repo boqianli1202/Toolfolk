@@ -17,7 +17,7 @@ export default function DesktopAppPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="#"
+              href="https://github.com/boqianli1202/Toolfolk/releases/download/v1.0.0/Toolfolk-1.0.0-arm64.dmg"
               className="inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition shadow-lg"
             >
               <Apple className="h-6 w-6" />
@@ -25,13 +25,13 @@ export default function DesktopAppPage() {
             </a>
             <a
               href="#"
-              className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/20 transition"
+              className="inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white/20 transition opacity-60 cursor-not-allowed"
             >
               <Globe className="h-6 w-6" />
-              Download for Windows
+              Windows — Coming Soon
             </a>
           </div>
-          <p className="text-sm text-green-200 mt-4">Coming soon — build in progress</p>
+          <p className="text-sm text-green-200 mt-4">v1.0.0 &middot; macOS (Apple Silicon) &middot; 94 MB</p>
         </div>
       </section>
 
