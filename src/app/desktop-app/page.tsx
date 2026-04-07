@@ -81,32 +81,52 @@ export default function DesktopAppPage() {
         </div>
       </section>
 
-      {/* Setup note */}
+      {/* Installation Guide */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-          <h3 className="font-semibold text-amber-900 mb-3">
-            Important: First-time setup (macOS)
-          </h3>
-          <p className="text-sm text-amber-700 mb-3">
-            macOS may show &quot;Toolfolk is damaged and can&apos;t be opened&quot; because the app
-            isn&apos;t code-signed yet. To fix this:
-          </p>
-          <ol className="text-sm text-amber-700 space-y-2 list-decimal list-inside mb-3">
-            <li>Open <strong>Terminal</strong> (search &quot;Terminal&quot; in Spotlight)</li>
-            <li>
-              Paste this command and press Enter:
-              <code className="block bg-amber-100 rounded-lg px-3 py-2 mt-1 text-amber-900 font-mono text-xs select-all">
+        <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+          Installation Guide
+        </h2>
+
+        {/* Step-by-step */}
+        <div className="space-y-4 mb-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex gap-4">
+            <div className="h-8 w-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">1</div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Download the DMG file</h4>
+              <p className="text-sm text-gray-500">Click the &quot;Download for macOS&quot; button above. The file will appear in your Downloads folder.</p>
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex gap-4">
+            <div className="h-8 w-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">2</div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Open the DMG and drag to Applications</h4>
+              <p className="text-sm text-gray-500">Double-click the downloaded .dmg file. Drag the Toolfolk icon to the Applications folder.</p>
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex gap-4">
+            <div className="h-8 w-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">3</div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Fix the &quot;damaged app&quot; warning</h4>
+              <p className="text-sm text-gray-500 mb-2">
+                macOS blocks apps that aren&apos;t from the App Store. Open <strong>Terminal</strong> (search &quot;Terminal&quot; in Spotlight) and paste this command:
+              </p>
+              <code className="block bg-gray-900 text-green-400 rounded-lg px-4 py-3 font-mono text-sm select-all">
                 xattr -cr /Applications/Toolfolk.app
               </code>
-              <span className="text-xs text-amber-600 mt-1 block">
-                If you haven&apos;t moved the app to Applications yet, use: <code className="font-mono">xattr -cr ~/Downloads/Toolfolk.app</code>
-              </span>
-            </li>
-            <li>Open the app — it should work now!</li>
-          </ol>
-          <p className="text-xs text-amber-600">
-            You only need to do this once. This is standard for unsigned macOS apps.
-          </p>
+              <p className="text-xs text-gray-400 mt-2">Press Enter. You only need to do this once.</p>
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 flex gap-4">
+            <div className="h-8 w-8 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center font-bold text-sm shrink-0">4</div>
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-1">Open Toolfolk and log in</h4>
+              <p className="text-sm text-gray-500">Open the app from Applications. Sign in with the same account you use on toolfolk.vercel.app.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-sm text-blue-700">
+          <strong>Why does macOS show a warning?</strong> The app isn&apos;t code-signed with an Apple Developer certificate ($99/year). This is common for free, open-source apps. The Terminal command simply tells macOS it&apos;s safe to open.
         </div>
       </section>
     </div>

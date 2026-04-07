@@ -3,22 +3,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-export async function POST(req: Request) {
+// Use PUT with raw body streaming — bypasses Vercel's body size limit
+export async function PUT(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const filename = req.headers.get("x-filename") || `${Date.now()}.zip`;
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
-
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-    const blob = await put(filename, file.stream(), {
+    // Stream raw body directly to Vercel Blob — no buffering
+    const blob = await put(filename, req.body!, {
       access: "public",
       contentType: "application/zip",
     });
@@ -31,9 +27,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

@@ -221,10 +221,13 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           entryFile = "index.html";
         }
 
-        // Step 2: Upload ZIP to Blob via streaming endpoint
-        const blobForm = new FormData();
-        blobForm.append("file", zipFile!);
-        const blobRes = await fetch("/api/tools/upload-blob", { method: "POST", body: blobForm });
+        // Step 2: Upload ZIP directly via streaming PUT (bypasses body size limit)
+        const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
+        const blobRes = await fetch("/api/tools/upload-blob", {
+          method: "PUT",
+          headers: { "x-filename": blobFilename },
+          body: zipFile!,
+        });
         const blobData = await blobRes.json();
         if (!blobRes.ok) throw new Error(blobData.error || "Blob upload failed");
 
