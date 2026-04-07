@@ -71,6 +71,10 @@ export default function UploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!category) {
+      setError("Please select a category");
+      return;
+    }
     if (mode === "paste" && !code.trim()) {
       setError("Please paste your code");
       return;
@@ -208,22 +212,31 @@ export default function UploadPage() {
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Category
           </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Select a category...</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat.slug} value={cat.slug}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-4 gap-2">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              const isSelected = category === cat.slug;
+              return (
+                <button
+                  key={cat.slug}
+                  type="button"
+                  onClick={() => setCategory(cat.slug)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition text-center ${
+                    isSelected
+                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-sm"
+                      : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${isSelected ? "text-indigo-600" : ""}`} />
+                  <span className="text-xs font-medium leading-tight">{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <input type="hidden" name="category" value={category} required />
         </div>
 
         {/* Paste Code mode */}
