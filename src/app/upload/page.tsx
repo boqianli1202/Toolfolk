@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
-import { upload as blobUpload } from "@vercel/blob/client";
 import JSZip from "jszip";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
@@ -223,15 +222,49 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           // ZIP detection failed — continue with defaults
         }
 
-        // Step 2: Upload ZIP via Vercel Blob client upload (file goes directly to Blob, not through server)
+        // Step 2: Get upload token from server, then upload directly to Vercel Blob
         let blobUrl: string;
         try {
           const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-          const blobResult = await blobUpload(blobFilename, zipFile!, {
-            access: "public",
-            handleUploadUrl: "/api/tools/upload-blob",
+
+          // Get client token (small JSON request — no file data)
+          const tokenRes = await fetch("/api/tools/upload-blob", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "blob.generate-client-token",
+              payload: {
+                pathname: blobFilename,
+                callbackUrl: `${window.location.origin}/api/tools/upload-blob`,
+                multipart: true,
+                clientPayload: "",
+              },
+            }),
           });
-          blobUrl = blobResult.url;
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok || !tokenData.clientToken) {
+            throw new Error(tokenData.error || "Failed to get upload token");
+          }
+
+          // Upload file directly to Vercel Blob (bypasses server entirely)
+          const uploadRes = await fetch(
+            `https://blob.vercel-storage.com/${blobFilename}`,
+            {
+              method: "PUT",
+              headers: {
+                authorization: `Bearer ${tokenData.clientToken}`,
+                "x-api-version": "7",
+                "x-content-type": "application/zip",
+                "x-cache-control-max-age": "31536000",
+              },
+              body: zipFile!,
+            }
+          );
+          const uploadData = await uploadRes.json();
+          if (!uploadRes.ok) {
+            throw new Error(uploadData.error?.message || "Blob upload failed");
+          }
+          blobUrl = uploadData.url;
         } catch (uploadErr) {
           setError(`Upload failed: ${uploadErr instanceof Error ? uploadErr.message : "Could not upload file"}`);
           setUploading(false);
