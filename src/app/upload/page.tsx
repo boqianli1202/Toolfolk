@@ -189,45 +189,54 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
         });
       } else if (mode === "desktop") {
         // Step 1: Detect project type from ZIP
-        const zipBuffer = await zipFile!.arrayBuffer();
-        const zip = await JSZip.loadAsync(zipBuffer);
-        const files = Object.keys(zip.files);
-        const normalized = files.filter(f => !f.endsWith("/"));
+        setError("");
 
         let language = "unknown", entryFile: string | null = null, dependencies: string | null = null;
+        try {
+          const zipBuffer = await zipFile!.arrayBuffer();
+          const zip = await JSZip.loadAsync(zipBuffer);
+          const files = Object.keys(zip.files);
+          const normalized = files.filter(f => !f.endsWith("/"));
 
-        // Strip top-level folder
-        let stripped = normalized;
-        if (normalized.length > 0) {
-          const first = normalized[0].split("/");
-          if (first.length > 1) {
-            const prefix = first[0] + "/";
-            if (normalized.every(p => p.startsWith(prefix))) {
-              stripped = normalized.map(p => p.slice(prefix.length));
+          let stripped = normalized;
+          if (normalized.length > 0) {
+            const first = normalized[0].split("/");
+            if (first.length > 1) {
+              const prefix = first[0] + "/";
+              if (normalized.every(p => p.startsWith(prefix))) {
+                stripped = normalized.map(p => p.slice(prefix.length));
+              }
             }
           }
+
+          if (stripped.some(f => f === "requirements.txt") || stripped.some(f => f.endsWith(".py"))) {
+            language = "python";
+            dependencies = stripped.includes("requirements.txt") ? "requirements.txt" : null;
+            const pyFiles = stripped.filter(f => f.endsWith(".py") && !f.includes("/"));
+            entryFile = pyFiles.find(f => f === "main.py") || pyFiles.find(f => f === "app.py") || pyFiles.find(f => f === "clock.py") || pyFiles[0] || null;
+          } else if (stripped.includes("package.json")) {
+            language = "node"; dependencies = "package.json"; entryFile = "index.js";
+          } else if (stripped.includes("index.html")) {
+            language = "html"; entryFile = "index.html";
+          }
+        } catch {
+          // ZIP detection failed — continue with defaults
         }
 
-        if (stripped.some(f => f === "requirements.txt") || stripped.some(f => f.endsWith(".py"))) {
-          language = "python";
-          dependencies = stripped.includes("requirements.txt") ? "requirements.txt" : null;
-          const pyFiles = stripped.filter(f => f.endsWith(".py") && !f.includes("/"));
-          entryFile = pyFiles.find(f => f === "main.py") || pyFiles.find(f => f === "app.py") || pyFiles.find(f => f === "clock.py") || pyFiles[0] || null;
-        } else if (stripped.includes("package.json")) {
-          language = "node";
-          dependencies = "package.json";
-          entryFile = "index.js";
-        } else if (stripped.includes("index.html")) {
-          language = "html";
-          entryFile = "index.html";
+        // Step 2: Upload ZIP via Vercel Blob client upload (file goes directly to Blob, not through server)
+        let blobUrl: string;
+        try {
+          const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
+          const blobResult = await blobUpload(blobFilename, zipFile!, {
+            access: "public",
+            handleUploadUrl: "/api/tools/upload-blob",
+          });
+          blobUrl = blobResult.url;
+        } catch (uploadErr) {
+          setError(`Upload failed: ${uploadErr instanceof Error ? uploadErr.message : "Could not upload file"}`);
+          setUploading(false);
+          return;
         }
-
-        // Step 2: Client-side upload directly to Vercel Blob (bypasses server body limit)
-        const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-        const blobResult = await blobUpload(blobFilename, zipFile!, {
-          access: "public",
-          handleUploadUrl: "/api/tools/upload-blob",
-        });
 
         // Step 3: Create Tool record with metadata
         res = await fetch("/api/tools/upload-zip", {
@@ -235,7 +244,7 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title, description, category, instructions,
-            blobUrl: blobResult.url,
+            blobUrl,
             fileSize: zipFile!.size,
             language, entryFile, dependencies,
           }),
