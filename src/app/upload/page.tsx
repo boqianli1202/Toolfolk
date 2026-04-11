@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Upload, FileUp, Code, Eye, EyeOff, Sparkles, Monitor } from "lucide-react";
-import { upload as blobUpload } from "@vercel/blob/client";
+import { put as blobPut } from "@vercel/blob/client";
 import JSZip from "jszip";
 import { CATEGORIES } from "@/lib/categories";
 import Link from "next/link";
@@ -223,13 +223,24 @@ ${htmlContent || ""}${hasJS ? `\n<script>\n${jsCode}\n</script>` : ""}
           // ZIP detection failed — continue with defaults
         }
 
-        // Step 2: Upload ZIP directly to Vercel Blob (file never hits our server)
+        // Step 2: Get client token, then upload ZIP directly to Vercel Blob
         let blobUrl: string;
         try {
           const blobFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.zip`;
-          const blobResult = await blobUpload(blobFilename, zipFile!, {
+
+          // Get a client upload token (small request, no file data)
+          const tokenRes = await fetch("/api/tools/upload-blob", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pathname: blobFilename }),
+          });
+          const tokenData = await tokenRes.json();
+          if (!tokenRes.ok) throw new Error(tokenData.error || "Failed to get upload token");
+
+          // Upload directly to Vercel Blob with the token (no callback, no hanging)
+          const blobResult = await blobPut(blobFilename, zipFile!, {
             access: "public",
-            handleUploadUrl: "/api/tools/upload-blob",
+            token: tokenData.clientToken,
           });
           blobUrl = blobResult.url;
         } catch (uploadErr) {
