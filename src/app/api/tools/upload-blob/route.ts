@@ -13,7 +13,9 @@ export async function POST(req: Request) {
           maximumSizeInBytes: 50 * 1024 * 1024,
         };
       },
-      onUploadCompleted: async () => {},
+      onUploadCompleted: async () => {
+        // no-op — client handles everything after upload
+      },
     });
 
     return NextResponse.json(jsonResponse);
